@@ -4,7 +4,9 @@ on:
     - cron: "0 6 * * *"     # 11:30 IST
     - cron: "0 18 * * *"    # 23:30 IST (exits in ~1 min when both pages are 30+ days ahead)
   workflow_dispatch:
-    inputs: {dry_run: {type: boolean, default: true}}
+    inputs:
+      dry_run: {type: boolean, default: true}
+      e2e: {type: boolean, default: false, description: 'tests + side-effect-free trending/top-up render and QA'}
 concurrency: {group: ig-studio, cancel-in-progress: false}   # trending + top-up never run at the same time
 permissions: {contents: read}
 jobs:
@@ -23,4 +25,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           GH_PAT: ${{ secrets.GH_PAT }}
-        run: bash box/ci_job.sh topup ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+        run: bash box/ci_job.sh ${{ inputs.e2e && 'e2e' || 'topup' }} ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
