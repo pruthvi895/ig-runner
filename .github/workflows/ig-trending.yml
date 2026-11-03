@@ -16,8 +16,8 @@ jobs:
         with: {repository: pruthvi895/ig-studio, token: "${{ secrets.GH_PAT }}", fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip, cache-dependency-path: box/requirements-ci.txt}
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with: {packages: ffmpeg libfribidi0 libraqm0, version: "1"}
+      - name: ffmpeg + text shaping libs (full apt install; a partial apt cache missed ffmpeg's libblas)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg libfribidi0 libraqm0 >/dev/null && ffmpeg -version | head -1 && ffprobe -version | head -1
       - run: pip install -q -r box/requirements-ci.txt
       - name: trending
         env:
