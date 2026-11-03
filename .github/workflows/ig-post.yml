@@ -1,0 +1,35 @@
+name: ig-post
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+    - cron: "7,22,37,52 * * * *"   # offset second cron: GitHub drops/delays scheduled runs, two lanes halve the gaps
+  workflow_dispatch:
+    inputs: {dry_run: {type: boolean, default: true}}
+concurrency: {group: ig-post, cancel-in-progress: false}
+permissions: {contents: read}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-schedule, token: "${{ secrets.GH_PAT }}", path: sched}
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-studio, token: "${{ secrets.GH_PAT }}", path: studio, sparse-checkout: cloud_ig}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -q requests
+      - name: publish
+        working-directory: sched
+        env:
+          IG_USER_ID_CASEBOOK_ATLAS: ${{ secrets.IG_USER_ID_CASEBOOK_ATLAS }}
+          IG_TOKEN_CASEBOOK_ATLAS: ${{ secrets.IG_TOKEN_CASEBOOK_ATLAS }}
+          IG_USER_ID_TENGLISH_GAMING: ${{ secrets.IG_USER_ID_TENGLISH_GAMING }}
+          IG_TOKEN_TENGLISH_GAMING: ${{ secrets.IG_TOKEN_TENGLISH_GAMING }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          MEDIA_REPO: pruthvi895/ig-media
+          IG_ISSUE_REPO: pruthvi895/ig-schedule
+        run: |
+          git config user.name ig-bot && git config user.email ig-bot@users.noreply.github.com
+          python ../studio/cloud_ig/publisher.py ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}

@@ -1,0 +1,32 @@
+name: ig-health
+on:
+  schedule: [{cron: "30 3 * * *"}]   # 09:00 IST
+  workflow_dispatch:
+concurrency: {group: ig-health, cancel-in-progress: false}
+permissions: {contents: write, actions: write}
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: keepalive (GitHub disables scheduled workflows after 60 days without repo activity)
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          for w in ig-post ig-trending ig-topup ig-health ig-token-refresh; do gh workflow enable "$w" -R "$GITHUB_REPOSITORY" || true; done
+          last=$(git log -1 --format=%ct); if [ $(( $(date +%s) - last )) -gt $((25*86400)) ]; then
+            date -u +%FT%TZ > .keepalive; git config user.name ig-bot; git config user.email ig-bot@users.noreply.github.com
+            git add .keepalive; git commit -qm "keepalive"; git push -q; echo "keepalive commit pushed"; else echo "recent commit, no keepalive needed"; fi
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-schedule, token: "${{ secrets.GH_PAT }}", path: sched}
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-studio, token: "${{ secrets.GH_PAT }}", path: studio, sparse-checkout: tools}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -q requests
+      - name: health
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IG_TOKEN_CASEBOOK_ATLAS: ${{ secrets.IG_TOKEN_CASEBOOK_ATLAS }}
+          IG_TOKEN_TENGLISH_GAMING: ${{ secrets.IG_TOKEN_TENGLISH_GAMING }}
+        run: python studio/tools/health.py sched

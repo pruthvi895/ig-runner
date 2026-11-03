@@ -1,0 +1,26 @@
+name: ig-topup
+on:
+  schedule:
+    - cron: "0 6 * * *"     # 11:30 IST
+    - cron: "0 18 * * *"    # 23:30 IST (exits in ~1 min when both pages are 30+ days ahead)
+  workflow_dispatch:
+    inputs: {dry_run: {type: boolean, default: true}}
+concurrency: {group: ig-studio, cancel-in-progress: false}   # trending + top-up never run at the same time
+permissions: {contents: read}
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-studio, token: "${{ secrets.GH_PAT }}", fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip, cache-dependency-path: box/requirements-ci.txt}
+      - uses: awalsh128/cache-apt-pkgs-action@v1
+        with: {packages: ffmpeg libfribidi0 libraqm0, version: "1"}
+      - run: pip install -q -r box/requirements-ci.txt
+      - name: topup
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: bash box/ci_job.sh topup ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}

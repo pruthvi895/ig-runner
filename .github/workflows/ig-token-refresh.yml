@@ -1,0 +1,29 @@
+name: ig-token-refresh
+on:
+  schedule: [{cron: "45 3 * * 1"}]   # Mondays 09:15 IST
+  workflow_dispatch:
+concurrency: {group: ig-post, cancel-in-progress: false}   # writes ig-schedule: never alongside the poster
+permissions: {contents: read}
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-schedule, token: "${{ secrets.GH_PAT }}", path: sched}
+      - uses: actions/checkout@v4
+        with: {repository: pruthvi895/ig-studio, token: "${{ secrets.GH_PAT }}", path: studio, sparse-checkout: cloud_ig}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -q requests
+      - working-directory: sched
+        env:
+          IG_TOKEN_CASEBOOK_ATLAS: ${{ secrets.IG_TOKEN_CASEBOOK_ATLAS }}
+          IG_TOKEN_TENGLISH_GAMING: ${{ secrets.IG_TOKEN_TENGLISH_GAMING }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          IG_ISSUE_REPO: pruthvi895/ig-schedule
+          IG_SECRET_REPOS: pruthvi895/ig-runner,pruthvi895/ig-schedule
+        run: |
+          git config user.name ig-bot && git config user.email ig-bot@users.noreply.github.com
+          python ../studio/cloud_ig/refresh_tokens.py
