@@ -1,4 +1,4 @@
-name: ig-health
+﻿name: ig-health
 on:
   schedule: [{cron: "30 3 * * *"}]   # 09:00 IST
   workflow_dispatch:
@@ -30,3 +30,12 @@ jobs:
           IG_TOKEN_CASEBOOK_ATLAS: ${{ secrets.IG_TOKEN_CASEBOOK_ATLAS }}
           IG_TOKEN_TENGLISH_GAMING: ${{ secrets.IG_TOKEN_TENGLISH_GAMING }}
         run: python studio/tools/health.py sched
+      - name: reach check (weekly; Reels vs image reach -> planner weights)
+        if: always()
+        env:
+          IG_TOKEN_CASEBOOK_ATLAS: ${{ secrets.IG_TOKEN_CASEBOOK_ATLAS }}
+          IG_TOKEN_TENGLISH_GAMING: ${{ secrets.IG_TOKEN_TENGLISH_GAMING }}
+        run: |
+          python studio/tools/reach.py sched ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+          cd sched && git config user.name ig-bot && git config user.email ig-bot@users.noreply.github.com
+          git add reach_weights.json && (git diff --cached --quiet || (git commit -qm "reach weights" && (git push -q || (git pull -q --rebase && git push -q))))
