@@ -13,7 +13,7 @@ jobs:
       - name: keepalive (GitHub disables scheduled workflows after 60 days without repo activity)
         env: {GH_TOKEN: "${{ github.token }}"}
         run: |
-          for w in ig-post ig-trending ig-topup ig-health ig-token-refresh; do gh workflow enable "$w" -R "$GITHUB_REPOSITORY" || true; done
+          for w in ig-post.yml ig-trending.yml ig-topup.yml ig-health.yml ig-token-refresh.yml; do gh workflow enable "$w" -R "$GITHUB_REPOSITORY" || true; done
           last=$(git log -1 --format=%ct); if [ $(( $(date +%s) - last )) -gt $((25*86400)) ]; then
             date -u +%FT%TZ > .keepalive; git config user.name ig-bot; git config user.email ig-bot@users.noreply.github.com
             git add .keepalive; git commit -qm "keepalive"; git push -q; echo "keepalive commit pushed"; else echo "recent commit, no keepalive needed"; fi
